@@ -122,6 +122,29 @@ test('Vercel catch-all class route resolves /api/classes/shuoshuo/object-id', as
   );
 });
 
+test('explicit shuoshuo object route resolves DELETE /api/classes/shuoshuo/object-id', async () => {
+  const routeModulePath = require.resolve('../api/classes/shuoshuo/[objectId]');
+  await withMockedStore(
+    routeModulePath,
+    {
+      deleteObject: async (className, objectId) => {
+        assert.equal(className, 'shuoshuo');
+        assert.equal(objectId, 'object-id');
+      }
+    },
+    async (route) => {
+      const res = mockResponse();
+      await route({
+        method: 'DELETE',
+        query: { objectId: 'object-id' },
+        url: '/api/classes/shuoshuo/object-id'
+      }, res);
+      assert.equal(res.statusCode, 200);
+      assert.deepEqual(res.body, {});
+    }
+  );
+});
+
 test('Vercel class routes avoid dynamic segment name conflicts', () => {
   const classesDir = path.join(__dirname, '..', 'api', 'classes');
   const entries = fs.readdirSync(classesDir, { withFileTypes: true }).map((entry) => entry.name);
