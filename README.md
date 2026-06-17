@@ -9,6 +9,7 @@
 | `ADMIN_USERNAME` | 初始化管理员时必填 | 初始化页面注册第一个管理员账号时使用的用户名。数据库已有管理员后不会再创建。 |
 | `ADMIN_PASSWORD` | 初始化管理员时必填 | 初始化页面注册第一个管理员账号时使用的密码。 |
 | `ADMIN_IMG` | 否 | 管理员头像 URL。 |
+| `ADMIN_IMG_Token` | 否 | [S.EE](https://s.ee/) 图床上传 Token，不配置无法使用文件上传功能。 |
 | `ALLOW_ORIGIN` | 否 | 限制允许跨域访问的站点域名，多个域名用英文逗号分隔，例如 `https://blog.example.com,https://admin.example.com`。未配置时允许所有域名访问。 |
 
 ## Vercel 连接 Neon

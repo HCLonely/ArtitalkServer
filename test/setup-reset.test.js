@@ -148,17 +148,19 @@ test('register admin creates first admin when user table is empty', async () => 
   const prevUser = process.env.ADMIN_USERNAME;
   const prevPass = process.env.ADMIN_PASSWORD;
   const prevImg = process.env.ADMIN_IMG;
+  const prevImgToken = process.env.ADMIN_IMG_Token;
   process.env.ADMIN_USERNAME = 'admin';
   process.env.ADMIN_PASSWORD = 'secret123';
   process.env.ADMIN_IMG = 'https://example.com/avatar.png';
+  process.env.ADMIN_IMG_Token = 'img-upload-token';
 
   try {
     const created = [];
     const handler = createSetupRegisterAdminHandler({
       store: {
         setupStatus: async () => ({ initialized: true, counts: { users: 0 } }),
-        createUser: async ({ username, img, passwordRecord }) => {
-          created.push({ username, img, passwordRecord });
+        createUser: async ({ username, img, imgToken, passwordRecord }) => {
+          created.push({ username, img, imgToken, passwordRecord });
           return { object_id: 'admin1', username };
         },
         updateUserSession: async (id, token) => ({ object_id: id, session_token: token, username: 'admin' })
@@ -172,6 +174,7 @@ test('register admin creates first admin when user table is empty', async () => 
     assert.equal(created.length, 1);
     assert.equal(created[0].username, 'admin');
     assert.equal(created[0].img, 'https://example.com/avatar.png');
+    assert.equal(created[0].imgToken, 'img-upload-token');
     assert.ok(created[0].passwordRecord);
     assert.ok(created[0].passwordRecord.password_hash);
     assert.ok(created[0].passwordRecord.password_salt);
@@ -179,6 +182,7 @@ test('register admin creates first admin when user table is empty', async () => 
     process.env.ADMIN_USERNAME = prevUser;
     process.env.ADMIN_PASSWORD = prevPass;
     process.env.ADMIN_IMG = prevImg;
+    process.env.ADMIN_IMG_Token = prevImgToken;
   }
 });
 
