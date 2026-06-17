@@ -20,19 +20,9 @@ npm test
 部署到 Vercel 后，访问站点根路径。如果数据库中没有 Artitalk 数据，页面会显示两个选项：
 
 - `初始化数据库`：只创建数据库表结构。
-- `从 LeanCloud 迁移`：在浏览器中上传 `_User.0.jsonl`、`shuoshuo.0.jsonl` 和 `atComment.0.jsonl`，然后导入数据库。
+- `从 LeanCloud 迁移`：在浏览器中上传 `shuoshuo.0.jsonl` 和 `atComment.0.jsonl`，然后导入数据库。
 
-迁移会导入 `_User`、`shuoshuo` 和 `atComment` 三类 JSONL 导出数据。LeanCloud 导出的用户密码哈希不会直接作为新系统登录密码使用；导入的 `_User.password` 只会保留为一次性的重置凭证。
-
-## 密码重置
-
-访问：
-
-```text
-/reset?user=<用户名>&pwd=<导入的 LeanCloud 加密密码>
-```
-
-页面会要求输入新密码。如果 `pwd` 与该用户导入的 `_User.password` 完全一致，服务端会把新密码保存为 PBKDF2-SHA256 哈希，并清空旧的重置凭证。
+迁移会导入 `shuoshuo` 和 `atComment` 三类 JSONL 导出数据。
 
 ## 客户端配置
 
@@ -45,4 +35,9 @@ new Artitalk({
 })
 ```
 
-客户端会从该服务加载 `/artitalk-av.js`，随后通过 `/api` 调用服务端接口。
+## Todo
+
+- [ ] 导入时不在导入_User.0.jsonl内容，删除相关代码
+- [ ] 如果用户表内容为空，则从环境变量中读取ADMIN_USERNAME,ADMIN_PASSWORD,ADMIN_IMG信息注册用户
+- [ ] 移除密码重置相关内容
+- [ ] 图床设置
