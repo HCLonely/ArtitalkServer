@@ -34,10 +34,3 @@ new Artitalk({
   serverURL: 'https://your-vercel-app.vercel.app'
 })
 ```
-
-## Todo
-
-- [ ] 导入时不在导入_User.0.jsonl内容，删除相关代码
-- [ ] 如果用户表内容为空，则从环境变量中读取ADMIN_USERNAME,ADMIN_PASSWORD,ADMIN_IMG信息注册用户
-- [ ] 移除密码重置相关内容
-- [ ] 图床设置
