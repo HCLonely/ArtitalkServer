@@ -1,7 +1,58 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const test = require('node:test');
+const vm = require('node:vm');
 
 const { createSetupStatusHandler, createSetupInitHandler, createSetupMigrateHandler, createResetHandler } = require('../lib/api');
+
+function loadIndexScript() {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+  return html.match(/<script>([\s\S]*)<\/script>/)[1];
+}
+
+function createClassList() {
+  const classes = new Set(['hidden']);
+  return {
+    contains: (className) => classes.has(className),
+    add: (className) => classes.add(className),
+    remove: (className) => classes.delete(className),
+    toggle: (className, force) => {
+      if (force) classes.add(className);
+      else classes.delete(className);
+    }
+  };
+}
+
+async function renderIndexWithStatus(status) {
+  const elements = {};
+  const document = {
+    getElementById(id) {
+      if (!elements[id]) {
+        elements[id] = {
+          classList: createClassList(),
+          files: [],
+          textContent: '',
+          innerHTML: '',
+          onclick: undefined,
+          onsubmit: undefined
+        };
+      }
+      return elements[id];
+    }
+  };
+  const context = {
+    document,
+    fetch: async () => ({
+      ok: true,
+      json: async () => status
+    })
+  };
+
+  vm.runInNewContext(loadIndexScript(), context);
+  await new Promise((resolve) => setImmediate(resolve));
+  return elements;
+}
 
 function mockResponse() {
   return {
@@ -42,6 +93,18 @@ test('setup status reports empty database state', async () => {
     empty: true,
     counts: { users: 0, talks: 0, comments: 0 }
   });
+});
+
+test('setup page shows project introduction link after database initialization', async () => {
+  const elements = await renderIndexWithStatus({
+    initialized: true,
+    empty: true,
+    counts: { users: 0, talks: 0, comments: 0 }
+  });
+
+  assert.match(elements.status.innerHTML, /HCLonely\/ArtitalkServer/);
+  assert.match(elements.status.innerHTML, /https:\/\/github\.com\/HCLonely\/ArtitalkServer/);
+  assert.equal(elements['empty-actions'].classList.contains('hidden'), true);
 });
 
 test('setup migrate imports uploaded LeanCloud JSONL content', async () => {

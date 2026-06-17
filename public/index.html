@@ -60,6 +60,9 @@
       background: #eef2f7;
       border-radius: 6px;
     }
+    a {
+      color: #2563eb;
+    }
   </style>
 </head>
 <body>
@@ -106,10 +109,16 @@
     async function readStatus() {
       try {
         const status = await request('/api/setup/status');
-        statusNode.textContent = status.empty
-          ? '数据库为空，可以初始化或从 LeanCloud 导入。'
-          : `数据库已存在数据：用户 ${status.counts.users}，说说 ${status.counts.talks}，评论 ${status.counts.comments}。`;
-        emptyActions.classList.toggle('hidden', !status.empty);
+        if (status.initialized) {
+          statusNode.innerHTML = '本项目介绍：<a href="https://github.com/HCLonely/ArtitalkServer">HCLonely/ArtitalkServer</a>';
+          emptyActions.classList.add('hidden');
+          migrateForm.classList.add('hidden');
+          output.classList.add('hidden');
+          return;
+        }
+
+        statusNode.textContent = '数据库为空，可以初始化或从 LeanCloud 导入。';
+        emptyActions.classList.remove('hidden');
         showOutput(status);
       } catch (error) {
         statusNode.textContent = error.message;
