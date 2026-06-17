@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reset Artitalk Password</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+      color: #1f2933;
+      background: #f5f7fa;
+    }
+    main {
+      width: min(560px, calc(100% - 32px));
+      margin: 48px auto;
+      padding: 24px;
+      background: #fff;
+      border: 1px solid #d9e2ec;
+      border-radius: 8px;
+    }
+    label {
+      display: block;
+      margin: 16px 0 6px;
+      font-weight: 600;
+    }
+    input {
+      box-sizing: border-box;
+      width: 100%;
+      min-height: 40px;
+      padding: 8px 10px;
+      border: 1px solid #bcccdc;
+      border-radius: 6px;
+    }
+    button {
+      min-height: 40px;
+      margin-top: 20px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 6px;
+      background: #2563eb;
+      color: #fff;
+      cursor: pointer;
+    }
+    pre {
+      white-space: pre-wrap;
+      padding: 12px;
+      background: #eef2f7;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>重置 Artitalk 密码</h1>
+    <p id="summary"></p>
+    <form id="reset-form">
+      <label for="new-password">新密码</label>
+      <input id="new-password" type="password" minlength="8" autocomplete="new-password" required>
+      <button type="submit">设置新密码</button>
+    </form>
+    <pre id="output"></pre>
+  </main>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const username = params.get('user');
+    const legacyPassword = params.get('pwd');
+    const output = document.getElementById('output');
+    document.getElementById('summary').textContent = username
+      ? `用户：${username}`
+      : '缺少 user 参数。';
+
+    document.getElementById('reset-form').onsubmit = async (event) => {
+      event.preventDefault();
+      const newPassword = document.getElementById('new-password').value;
+      if (!username || !legacyPassword) {
+        output.textContent = '缺少 user 或 pwd 参数。';
+        return;
+      }
+      const response = await fetch('/api/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, legacyPassword, newPassword })
+      });
+      const json = await response.json();
+      output.textContent = response.ok
+        ? '密码已重置，请使用新密码登录。'
+        : json.error || '重置失败。';
+    };
+  </script>
+</body>
+</html>

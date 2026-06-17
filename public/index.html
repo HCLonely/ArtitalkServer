@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Artitalk Server Setup</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+      color: #1f2933;
+      background: #f5f7fa;
+    }
+    main {
+      width: min(760px, calc(100% - 32px));
+      margin: 48px auto;
+    }
+    section {
+      padding: 24px;
+      background: #fff;
+      border: 1px solid #d9e2ec;
+      border-radius: 8px;
+    }
+    h1 {
+      margin: 0 0 16px;
+      font-size: 28px;
+    }
+    button {
+      min-height: 40px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 6px;
+      background: #2563eb;
+      color: #fff;
+      cursor: pointer;
+    }
+    button.secondary {
+      background: #475569;
+    }
+    label {
+      display: block;
+      margin: 16px 0 6px;
+      font-weight: 600;
+    }
+    input[type="file"] {
+      width: 100%;
+    }
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+    .hidden {
+      display: none;
+    }
+    pre {
+      white-space: pre-wrap;
+      padding: 12px;
+      background: #eef2f7;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section>
+      <h1>Artitalk Server</h1>
+      <p id="status">正在读取数据库状态...</p>
+      <div id="empty-actions" class="actions hidden">
+        <button id="init-db">初始化数据库</button>
+        <button id="show-migrate" class="secondary">从 LeanCloud 迁移</button>
+      </div>
+      <form id="migrate-form" class="hidden">
+        <label for="users">_User.0.jsonl</label>
+        <input id="users" name="users" type="file" accept=".jsonl,.txt,application/json">
+        <label for="talks">shuoshuo.0.jsonl</label>
+        <input id="talks" name="talks" type="file" accept=".jsonl,.txt,application/json">
+        <label for="comments">atComment.0.jsonl</label>
+        <input id="comments" name="comments" type="file" accept=".jsonl,.txt,application/json">
+        <div class="actions">
+          <button type="submit">开始迁移</button>
+        </div>
+      </form>
+      <pre id="output" class="hidden"></pre>
+    </section>
+  </main>
+  <script>
+    const statusNode = document.getElementById('status');
+    const output = document.getElementById('output');
+    const emptyActions = document.getElementById('empty-actions');
+    const migrateForm = document.getElementById('migrate-form');
+
+    function showOutput(value) {
+      output.classList.remove('hidden');
+      output.textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+    }
+
+    async function request(path, options) {
+      const response = await fetch(path, options);
+      const json = await response.json();
+      if (!response.ok) throw new Error(json.error || '请求失败');
+      return json;
+    }
+
+    async function readStatus() {
+      try {
+        const status = await request('/api/setup/status');
+        statusNode.textContent = status.empty
+          ? '数据库为空，可以初始化或从 LeanCloud 导入。'
+          : `数据库已存在数据：用户 ${status.counts.users}，说说 ${status.counts.talks}，评论 ${status.counts.comments}。`;
+        emptyActions.classList.toggle('hidden', !status.empty);
+        showOutput(status);
+      } catch (error) {
+        statusNode.textContent = error.message;
+      }
+    }
+
+    document.getElementById('init-db').onclick = async () => {
+      try {
+        const result = await request('/api/setup/init', { method: 'POST' });
+        showOutput(result);
+        await readStatus();
+      } catch (error) {
+        showOutput(error.message);
+      }
+    };
+
+    document.getElementById('show-migrate').onclick = () => {
+      migrateForm.classList.remove('hidden');
+    };
+
+    migrateForm.onsubmit = async (event) => {
+      event.preventDefault();
+      const users = document.getElementById('users').files[0];
+      const talks = document.getElementById('talks').files[0];
+      const comments = document.getElementById('comments').files[0];
+      if (!users || !talks || !comments) {
+        showOutput('请上传三个 LeanCloud 导出文件。');
+        return;
+      }
+      try {
+        const result = await request('/api/setup/migrate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            users: await users.text(),
+            talks: await talks.text(),
+            comments: await comments.text()
+          })
+        });
+        showOutput(result);
+        await readStatus();
+      } catch (error) {
+        showOutput(error.message);
+      }
+    };
+
+    readStatus();
+  </script>
+</body>
+</html>

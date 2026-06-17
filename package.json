@@ -1,0 +1,12 @@
+{
+  "name": "artitalk-server",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.1"
+  },
+  "devDependencies": {}
+}
