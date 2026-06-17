@@ -45,21 +45,6 @@
     input[type="file"] {
       width: 100%;
     }
-    input[type="text"],
-    input[type="password"] {
-      width: 100%;
-      padding: 8px 12px;
-      border: 1px solid #d9e2ec;
-      border-radius: 6px;
-      font-size: 14px;
-      box-sizing: border-box;
-    }
-    input[type="text"]:focus,
-    input[type="password"]:focus {
-      outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-    }
     .actions {
       display: flex;
       gap: 12px;
@@ -90,17 +75,8 @@
         <button id="show-migrate" class="secondary">从 LeanCloud 迁移</button>
       </div>
       <div id="admin-actions" class="actions hidden">
-        <button id="show-register-admin">初始化管理员账户</button>
+        <button id="register-admin">初始化管理员账户</button>
       </div>
-      <form id="register-admin-form" class="hidden">
-        <label for="admin-username">管理员用户名</label>
-        <input id="admin-username" type="text" required>
-        <label for="admin-password">管理员密码</label>
-        <input id="admin-password" type="password" required>
-        <div class="actions">
-          <button type="submit">注册管理员</button>
-        </div>
-      </form>
       <form id="migrate-form" class="hidden">
         <label for="users">_User.0.jsonl</label>
         <input id="users" name="users" type="file" accept=".jsonl,.txt,application/json">
@@ -120,13 +96,11 @@
     const output = document.getElementById('output');
     const emptyActions = document.getElementById('empty-actions');
     const adminActions = document.getElementById('admin-actions');
-    const registerAdminForm = document.getElementById('register-admin-form');
     const migrateForm = document.getElementById('migrate-form');
 
     function hideAll() {
       emptyActions.classList.add('hidden');
       adminActions.classList.add('hidden');
-      registerAdminForm.classList.add('hidden');
       migrateForm.classList.add('hidden');
       output.classList.add('hidden');
     }
@@ -178,24 +152,9 @@
       }
     };
 
-    document.getElementById('show-register-admin').onclick = () => {
-      registerAdminForm.classList.remove('hidden');
-    };
-
-    registerAdminForm.onsubmit = async (event) => {
-      event.preventDefault();
-      const username = document.getElementById('admin-username').value;
-      const password = document.getElementById('admin-password').value;
-      if (!username || !password) {
-        showOutput('请填写用户名和密码。');
-        return;
-      }
+    document.getElementById('register-admin').onclick = async () => {
       try {
-        const result = await request('/api/setup/register-admin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        });
+        const result = await request('/api/setup/register-admin', { method: 'POST' });
         showOutput(result);
         await readStatus();
       } catch (error) {

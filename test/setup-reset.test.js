@@ -150,80 +150,112 @@ test('setup migrate imports uploaded LeanCloud JSONL content', async () => {
 });
 
 test('register admin creates first admin when user table is empty', async () => {
-  const created = [];
-  const handler = createSetupRegisterAdminHandler({
-    store: {
-      setupStatus: async () => ({ initialized: true, counts: { users: 0 } }),
-      createUser: async ({ username, passwordRecord }) => {
-        created.push({ username, passwordRecord });
-        return { object_id: 'admin1', username };
-      },
-      updateUserSession: async (id, token) => ({ object_id: id, session_token: token, username: 'admin' })
-    }
-  });
-  const res = mockResponse();
+  const prevUser = process.env.ADMIN_USERNAME;
+  const prevPass = process.env.ADMIN_PASSWORD;
+  const prevImg = process.env.ADMIN_IMG;
+  process.env.ADMIN_USERNAME = 'admin';
+  process.env.ADMIN_PASSWORD = 'secret123';
+  process.env.ADMIN_IMG = 'https://example.com/avatar.png';
 
-  await handler({
-    method: 'POST',
-    body: { username: 'admin', password: 'secret123' }
-  }, res);
+  try {
+    const created = [];
+    const handler = createSetupRegisterAdminHandler({
+      store: {
+        setupStatus: async () => ({ initialized: true, counts: { users: 0 } }),
+        createUser: async ({ username, img, passwordRecord }) => {
+          created.push({ username, img, passwordRecord });
+          return { object_id: 'admin1', username };
+        },
+        updateUserSession: async (id, token) => ({ object_id: id, session_token: token, username: 'admin' })
+      }
+    });
+    const res = mockResponse();
 
-  assert.equal(res.statusCode, 201);
-  assert.equal(created.length, 1);
-  assert.equal(created[0].username, 'admin');
-  assert.ok(created[0].passwordRecord);
-  assert.ok(created[0].passwordRecord.password_hash);
-  assert.ok(created[0].passwordRecord.password_salt);
+    await handler({ method: 'POST' }, res);
+
+    assert.equal(res.statusCode, 201);
+    assert.equal(created.length, 1);
+    assert.equal(created[0].username, 'admin');
+    assert.equal(created[0].img, 'https://example.com/avatar.png');
+    assert.ok(created[0].passwordRecord);
+    assert.ok(created[0].passwordRecord.password_hash);
+    assert.ok(created[0].passwordRecord.password_salt);
+  } finally {
+    process.env.ADMIN_USERNAME = prevUser;
+    process.env.ADMIN_PASSWORD = prevPass;
+    process.env.ADMIN_IMG = prevImg;
+  }
 });
 
 test('register admin rejects when user table not empty', async () => {
-  const handler = createSetupRegisterAdminHandler({
-    store: {
-      setupStatus: async () => ({ initialized: true, counts: { users: 1 } })
-    }
-  });
-  const res = mockResponse();
+  const prevUser = process.env.ADMIN_USERNAME;
+  const prevPass = process.env.ADMIN_PASSWORD;
+  process.env.ADMIN_USERNAME = 'admin';
+  process.env.ADMIN_PASSWORD = 'secret123';
 
-  await handler({
-    method: 'POST',
-    body: { username: 'admin', password: 'secret123' }
-  }, res);
+  try {
+    const handler = createSetupRegisterAdminHandler({
+      store: {
+        setupStatus: async () => ({ initialized: true, counts: { users: 1 } })
+      }
+    });
+    const res = mockResponse();
 
-  assert.equal(res.statusCode, 400);
-  assert.equal(res.body.error, '管理员账户已存在。');
+    await handler({ method: 'POST' }, res);
+
+    assert.equal(res.statusCode, 400);
+    assert.equal(res.body.error, '管理员账户已存在。');
+  } finally {
+    process.env.ADMIN_USERNAME = prevUser;
+    process.env.ADMIN_PASSWORD = prevPass;
+  }
 });
 
 test('register admin rejects when database not initialized', async () => {
-  const handler = createSetupRegisterAdminHandler({
-    store: {
-      setupStatus: async () => ({ initialized: false })
-    }
-  });
-  const res = mockResponse();
+  const prevUser = process.env.ADMIN_USERNAME;
+  const prevPass = process.env.ADMIN_PASSWORD;
+  process.env.ADMIN_USERNAME = 'admin';
+  process.env.ADMIN_PASSWORD = 'secret123';
 
-  await handler({
-    method: 'POST',
-    body: { username: 'admin', password: 'secret123' }
-  }, res);
+  try {
+    const handler = createSetupRegisterAdminHandler({
+      store: {
+        setupStatus: async () => ({ initialized: false })
+      }
+    });
+    const res = mockResponse();
 
-  assert.equal(res.statusCode, 400);
-  assert.equal(res.body.error, '请先初始化数据库。');
+    await handler({ method: 'POST' }, res);
+
+    assert.equal(res.statusCode, 400);
+    assert.equal(res.body.error, '请先初始化数据库。');
+  } finally {
+    process.env.ADMIN_USERNAME = prevUser;
+    process.env.ADMIN_PASSWORD = prevPass;
+  }
 });
 
-test('register admin rejects empty username or password', async () => {
-  const handler = createSetupRegisterAdminHandler({
-    store: {
-      setupStatus: async () => ({ initialized: true, counts: { users: 0 } })
-    }
-  });
-  const res = mockResponse();
+test('register admin rejects when env vars not set', async () => {
+  const prevUser = process.env.ADMIN_USERNAME;
+  const prevPass = process.env.ADMIN_PASSWORD;
+  delete process.env.ADMIN_USERNAME;
+  delete process.env.ADMIN_PASSWORD;
 
-  await handler({
-    method: 'POST',
-    body: { username: '', password: '' }
-  }, res);
+  try {
+    const handler = createSetupRegisterAdminHandler({
+      store: {
+        setupStatus: async () => ({ initialized: true, counts: { users: 0 } })
+      }
+    });
+    const res = mockResponse();
 
-  assert.equal(res.statusCode, 400);
-  assert.equal(res.body.error, '用户名和密码不能为空。');
+    await handler({ method: 'POST' }, res);
+
+    assert.equal(res.statusCode, 400);
+    assert.equal(res.body.error, '请先设置 ADMIN_USERNAME 和 ADMIN_PASSWORD 环境变量。');
+  } finally {
+    process.env.ADMIN_USERNAME = prevUser;
+    process.env.ADMIN_PASSWORD = prevPass;
+  }
 });
 
