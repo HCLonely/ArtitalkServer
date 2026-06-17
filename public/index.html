@@ -78,8 +78,6 @@
         <button id="register-admin">初始化管理员账户</button>
       </div>
       <form id="migrate-form" class="hidden">
-        <label for="users">_User.0.jsonl</label>
-        <input id="users" name="users" type="file" accept=".jsonl,.txt,application/json">
         <label for="talks">shuoshuo.0.jsonl</label>
         <input id="talks" name="talks" type="file" accept=".jsonl,.txt,application/json">
         <label for="comments">atComment.0.jsonl</label>
@@ -168,11 +166,10 @@
 
     migrateForm.onsubmit = async (event) => {
       event.preventDefault();
-      const users = document.getElementById('users').files[0];
       const talks = document.getElementById('talks').files[0];
       const comments = document.getElementById('comments').files[0];
-      if (!users || !talks || !comments) {
-        showOutput('请上传三个 LeanCloud 导出文件。');
+      if (!talks || !comments) {
+        showOutput('请上传两个 LeanCloud 导出文件。');
         return;
       }
       try {
@@ -180,7 +177,6 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            users: await users.text(),
             talks: await talks.text(),
             comments: await comments.text()
           })

@@ -122,11 +122,9 @@ test('setup page shows admin registration when initialized but no users', async 
 
 test('setup migrate imports uploaded LeanCloud JSONL content', async () => {
   const created = [];
-  const migrated = [];
   const handler = createSetupMigrateHandler({
     store: {
       ensureSchema: async () => {},
-      migrateUsers: async (users) => { migrated.push(...users); return users.length; },
       createObject: async (className, record) => created.push({ className, record })
     }
   });
@@ -135,16 +133,13 @@ test('setup migrate imports uploaded LeanCloud JSONL content', async () => {
   await handler({
     method: 'POST',
     body: {
-      users: '{"objectId":"u1","username":"admin"}\n{"objectId":"u2","username":"test"}',
       talks: '{"objectId":"t1","atContentMd":"hello"}',
       comments: '{"objectId":"c1","atId":"t1","commentContent":"hi"}'
     }
   }, res);
 
   assert.equal(res.statusCode, 200);
-  assert.deepEqual(res.body, { imported: { users: 2, talks: 1, comments: 1 } });
-  assert.equal(migrated.length, 2);
-  assert.equal(migrated[0].username, 'admin');
+  assert.deepEqual(res.body, { imported: { talks: 1, comments: 1 } });
   assert.equal(created[0].className, 'shuoshuo');
   assert.equal(created[1].className, 'atComment');
 });
