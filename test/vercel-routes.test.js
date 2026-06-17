@@ -71,6 +71,25 @@ test('Vercel catch-all class route resolves /api/classes/shuoshuo', async () => 
   );
 });
 
+test('Vercel catch-all class route falls back to request url when path query is absent', async () => {
+  const routeModulePath = require.resolve('../api/classes/[...path]');
+  await withMockedStore(
+    routeModulePath,
+    {
+      listObjects: async (className) => {
+        assert.equal(className, 'shuoshuo');
+        return [];
+      }
+    },
+    async (route) => {
+      const res = mockResponse();
+      await route({ method: 'GET', url: '/api/classes/shuoshuo?order=-createdAt&limit=5&skip=0', query: {} }, res);
+      assert.equal(res.statusCode, 200);
+      assert.deepEqual(res.body, { results: [] });
+    }
+  );
+});
+
 test('Vercel catch-all class route resolves /api/classes/shuoshuo/object-id', async () => {
   const routeModulePath = require.resolve('../api/classes/[...path]');
   await withMockedStore(
