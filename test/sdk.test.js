@@ -5,7 +5,7 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 function loadSdk(fetchImpl) {
-  const source = fs.readFileSync(path.join(__dirname, '..', 'public', 'artitalk-av.js'), 'utf8');
+  const source = fs.readFileSync(path.join(__dirname, '../../src/plugins', 'artitalk-av.js'), 'utf8');
   const storage = {};
   const context = {
     fetch: fetchImpl,

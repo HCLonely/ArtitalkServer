@@ -4,7 +4,7 @@ const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
 
-const { createSetupStatusHandler, createSetupInitHandler, createSetupMigrateHandler } = require('../lib/api');
+const { createSetupStatusHandler, createSetupInitHandler, createSetupMigrateHandler, createSetupRegisterAdminHandler } = require('../lib/api');
 
 function loadIndexScript() {
   const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
@@ -98,20 +98,35 @@ test('setup status reports empty database state', async () => {
 test('setup page shows project introduction link after database initialization', async () => {
   const elements = await renderIndexWithStatus({
     initialized: true,
-    empty: true,
-    counts: { users: 0, talks: 0, comments: 0 }
+    empty: false,
+    counts: { users: 1, talks: 1, comments: 1 }
   });
 
   assert.match(elements.status.innerHTML, /HCLonely\/ArtitalkServer/);
   assert.match(elements.status.innerHTML, /https:\/\/github\.com\/HCLonely\/ArtitalkServer/);
   assert.equal(elements['empty-actions'].classList.contains('hidden'), true);
+  assert.equal(elements['admin-actions'].classList.contains('hidden'), true);
+});
+
+test('setup page shows admin registration when initialized but no users', async () => {
+  const elements = await renderIndexWithStatus({
+    initialized: true,
+    empty: false,
+    counts: { users: 0, talks: 1, comments: 1 }
+  });
+
+  assert.equal(elements['admin-actions'].classList.contains('hidden'), false);
+  assert.equal(elements['empty-actions'].classList.contains('hidden'), true);
+  assert.match(elements.status.textContent, /还没有管理员账户/);
 });
 
 test('setup migrate imports uploaded LeanCloud JSONL content', async () => {
   const created = [];
+  const migrated = [];
   const handler = createSetupMigrateHandler({
     store: {
       ensureSchema: async () => {},
+      migrateUsers: async (users) => { migrated.push(...users); return users.length; },
       createObject: async (className, record) => created.push({ className, record })
     }
   });
@@ -120,14 +135,95 @@ test('setup migrate imports uploaded LeanCloud JSONL content', async () => {
   await handler({
     method: 'POST',
     body: {
+      users: '{"objectId":"u1","username":"admin"}\n{"objectId":"u2","username":"test"}',
       talks: '{"objectId":"t1","atContentMd":"hello"}',
       comments: '{"objectId":"c1","atId":"t1","commentContent":"hi"}'
     }
   }, res);
 
   assert.equal(res.statusCode, 200);
-  assert.deepEqual(res.body, { imported: { talks: 1, comments: 1 } });
+  assert.deepEqual(res.body, { imported: { users: 2, talks: 1, comments: 1 } });
+  assert.equal(migrated.length, 2);
+  assert.equal(migrated[0].username, 'admin');
   assert.equal(created[0].className, 'shuoshuo');
   assert.equal(created[1].className, 'atComment');
+});
+
+test('register admin creates first admin when user table is empty', async () => {
+  const created = [];
+  const handler = createSetupRegisterAdminHandler({
+    store: {
+      setupStatus: async () => ({ initialized: true, counts: { users: 0 } }),
+      createUser: async ({ username, passwordRecord }) => {
+        created.push({ username, passwordRecord });
+        return { object_id: 'admin1', username };
+      },
+      updateUserSession: async (id, token) => ({ object_id: id, session_token: token, username: 'admin' })
+    }
+  });
+  const res = mockResponse();
+
+  await handler({
+    method: 'POST',
+    body: { username: 'admin', password: 'secret123' }
+  }, res);
+
+  assert.equal(res.statusCode, 201);
+  assert.equal(created.length, 1);
+  assert.equal(created[0].username, 'admin');
+  assert.ok(created[0].passwordRecord);
+  assert.ok(created[0].passwordRecord.password_hash);
+  assert.ok(created[0].passwordRecord.password_salt);
+});
+
+test('register admin rejects when user table not empty', async () => {
+  const handler = createSetupRegisterAdminHandler({
+    store: {
+      setupStatus: async () => ({ initialized: true, counts: { users: 1 } })
+    }
+  });
+  const res = mockResponse();
+
+  await handler({
+    method: 'POST',
+    body: { username: 'admin', password: 'secret123' }
+  }, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.body.error, '管理员账户已存在。');
+});
+
+test('register admin rejects when database not initialized', async () => {
+  const handler = createSetupRegisterAdminHandler({
+    store: {
+      setupStatus: async () => ({ initialized: false })
+    }
+  });
+  const res = mockResponse();
+
+  await handler({
+    method: 'POST',
+    body: { username: 'admin', password: 'secret123' }
+  }, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.body.error, '请先初始化数据库。');
+});
+
+test('register admin rejects empty username or password', async () => {
+  const handler = createSetupRegisterAdminHandler({
+    store: {
+      setupStatus: async () => ({ initialized: true, counts: { users: 0 } })
+    }
+  });
+  const res = mockResponse();
+
+  await handler({
+    method: 'POST',
+    body: { username: '', password: '' }
+  }, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.body.error, '用户名和密码不能为空。');
 });
 
